@@ -1,0 +1,26 @@
+{
+  "port": 4319,
+  "sessionsRoot": "/Users/YOU/.claude/projects",
+  "ignoreChecks": ["drift"],
+  "guardrails": {
+    "surfaceAtOrAbove": "soon",
+    "autoDecideFromLedger": true,
+    "staleAfterHours": 24
+  },
+  "delivery": {
+    "coalesceSeconds": 120,
+    "dryRun": false,
+    "permissionMode": "acceptEdits",
+    "claudeBin": "claude"
+  },
+  "repos": [
+    {
+      "name": "myrepo",
+      "slug": "you/myrepo",
+      "path": "/Users/YOU/Projects/myrepo",
+      "deliveryBranch": "main"
+    }
+  ],
+  "shotRoots": ["/Users/YOU/Projects"],
+  "fileRoots": ["/Users/YOU/Projects"]
+}

@@ -1,0 +1,45 @@
+[
+  {
+    "id": "example-console-action",
+    "project": "myapp",
+    "type": "action",
+    "urgency": "now",
+    "title": "Flip a third-party setting only you can change",
+    "need": "Your click in an external console. No agent can do this for you.",
+    "whoWhat": "Signups are blocked until this is switched on.",
+    "evidence": [
+      { "kind": "link", "label": "Open the console", "value": "https://console.example.com" }
+    ],
+    "actions": []
+  },
+  {
+    "id": "example-decision",
+    "project": "myapp",
+    "type": "decision",
+    "urgency": "soon",
+    "title": "One fork the agent could not resolve alone",
+    "need": "Pick a direction. The rest is automated once you do.",
+    "whoWhat": "An agent reached a point where your intent is required.",
+    "decisionKey": "myapp:example-fork",
+    "evidence": [
+      { "kind": "log", "label": "The tradeoff", "value": "Option A is faster to ship. Option B is cleaner long term." }
+    ],
+    "actions": [
+      { "kind": "verdict", "label": "Go with A", "value": "a" },
+      { "kind": "verdict", "label": "Go with B", "value": "b" }
+    ]
+  },
+  {
+    "id": "example-session-card",
+    "project": "myapp",
+    "type": "decision",
+    "urgency": "now",
+    "title": "A question a running Claude session needs answered",
+    "need": "Comment back and the session continues. The card stays open until you close it.",
+    "whoWhat": "A Claude Code session paused on an intent question and spawned this card.",
+    "source": { "kind": "session", "label": "myapp build", "sessionId": "REPLACE-WITH-A-REAL-SESSION-UUID", "cwd": "/Users/YOU/Projects/myapp" },
+    "evidence": [
+      { "kind": "log", "label": "Why it paused", "value": "The session needs your intent before it can proceed." }
+    ]
+  }
+]

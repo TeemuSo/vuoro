@@ -1,0 +1,26 @@
+node_modules/
+*.log
+.DS_Store
+_shot*.mjs
+
+# personal, machine-specific config and runtime data (ship the .example.json instead)
+config.json
+manual-cards.json
+ledger.jsonl
+cards/*.json
+!cards/.gitkeep
+issues/*.json
+!issues/.gitkeep
+responses/
+
+# local dev tooling — e2e harness data and Claude Code skills stay out of the repo
+.launchproof/
+.claude/
+
+# private working notes (metrics, client specifics, strategy)
+notes/
+
+# headless background wakes: one log per delivered ruling batch
+deliveries/
+# threads the human trashed from the cockpit list
+threads-hidden.json
