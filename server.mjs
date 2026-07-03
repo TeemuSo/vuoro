@@ -12,18 +12,23 @@ import { randomUUID } from 'node:crypto';
 
 const pexec = promisify(execFile);
 const DIR = dirname(fileURLToPath(import.meta.url));
+// Code lives at DIR; runtime data (cards, issues, ledger, config) lives at VUORO_DATA
+// when set. Point VUORO_DATA somewhere stable (e.g. ~/.vuoro) when running the cockpit
+// out of a managed checkout — like a Claude Code plugin install, which is replaced on update.
+const DATA = process.env.VUORO_DATA ? resolve(process.env.VUORO_DATA) : DIR;
+await mkdir(DATA, { recursive: true });
 // config.json is optional: without it the cockpit boots on defaults — Claude Code
 // sessions from ~/.claude/projects, no GitHub repos, evidence readable under $HOME.
 let userConfig = {};
-try { userConfig = JSON.parse(await readFile(join(DIR, 'config.json'), 'utf8')); } catch {}
+try { userConfig = JSON.parse(await readFile(join(DATA, 'config.json'), 'utf8')); } catch {}
 const CONFIG = { sessionsRoot: join(homedir(), '.claude', 'projects'), shotRoots: [homedir()], ...userConfig };
 const PORT = process.env.VUORO_PORT || CONFIG.port || 4319;
-const LEDGER = join(DIR, 'ledger.jsonl');
-const INBOX = join(DIR, 'cards');
-const ISSUES = join(DIR, 'issues');
+const LEDGER = join(DATA, 'ledger.jsonl');
+const INBOX = join(DATA, 'cards');
+const ISSUES = join(DATA, 'issues');
 const IGNORE = (CONFIG.ignoreChecks || []).map((s) => s.toLowerCase());
 const RANK = { now: 0, soon: 1, later: 2, watch: 3 };
-const PROOF_DASHBOARD = CONFIG.proofDashboard || 'http://localhost:4321';
+const PROOF_DASHBOARD = CONFIG.proofDashboard || '';
 await mkdir(INBOX, { recursive: true });
 await mkdir(ISSUES, { recursive: true });
 
@@ -150,7 +155,7 @@ async function tailInfo(file) {
 // Threads the human trashed from the list: sid -> hiddenAt ms. A hidden thread
 // reappears automatically if it sees activity NEWER than the hide (like
 // recurring cards); its transcript is never touched.
-const HIDDEN_FILE = join(DIR, 'threads-hidden.json');
+const HIDDEN_FILE = join(DATA, 'threads-hidden.json');
 async function loadHidden() { try { return JSON.parse(await readFile(HIDDEN_FILE, 'utf8')) || {}; } catch { return {}; } }
 // Live `claude` processes attributable to a session id — ones whose argv names
 // it (`--resume <sid>` / `--session-id <sid>`). Sessions started bare can't be
@@ -279,7 +284,7 @@ async function systemStats() {
 // the answer up from /api/answer the moment it exists.
 const DELIVERIES = new Map(); // sessionId -> { cwd, items: [text], timer }
 const WAKES = new Map(); // sessionId -> in-flight background-wake child process
-const DELIVERY_LOGS = join(DIR, 'deliveries');
+const DELIVERY_LOGS = join(DATA, 'deliveries');
 function deliveryConf() {
   const d = CONFIG.delivery || {};
   return {
@@ -372,7 +377,7 @@ function drainDeliveriesSync() {
 }
 async function findLocalCard(id) {
   try { return JSON.parse(await readFile(join(INBOX, id + '.json'), 'utf8')); } catch {}
-  try { return (JSON.parse(await readFile(join(DIR, 'manual-cards.json'), 'utf8')) || []).find((c) => c && c.id === id) || null; } catch { return null; }
+  try { return (JSON.parse(await readFile(join(DATA, 'manual-cards.json'), 'utf8')) || []).find((c) => c && c.id === id) || null; } catch { return null; }
 }
 // After a ruling lands in the ledger: if the card is session-sourced (and not
 // a blocking ask), compose its message and queue it for coalesced delivery.
@@ -436,7 +441,7 @@ function slotLine(s) {
 
 // ---------- Card sources ----------
 async function loadManual() {
-  try { return JSON.parse(await readFile(join(DIR, 'manual-cards.json'), 'utf8')); } catch { return []; }
+  try { return JSON.parse(await readFile(join(DATA, 'manual-cards.json'), 'utf8')); } catch { return []; }
 }
 async function loadInbox() {
   const out = [];
@@ -480,7 +485,7 @@ async function buildState(force) {
   const staleMs = (g.staleAfterHours || 0) * 3600 * 1000;
 
   // Per-issue events pulled from the append-only ledger: the agent marking
-  // itself complete, e2e proof attached by LaunchProof, and your acceptance.
+  // itself complete, e2e proof attached via the /api/proof webhook, and your acceptance.
   const proofByIssue = {}, completeByIssue = {}, acceptByIssue = {};
   for (const o of ledger.entries) {
     if (!o.issueId) continue;
@@ -514,9 +519,9 @@ async function buildState(force) {
       whoWhat: `Agent marked "${iss.title}" complete` + (p ? ` · e2e ${p.verdict}` : ' · no proof yet'),
       body: iss.description || '',
       evidence: [
-        ...(p ? [{ kind: 'log', label: `LaunchProof: ${p.verdict}${p.test ? ' · ' + p.test : ''}`,
+        ...(p ? [{ kind: 'log', label: `e2e proof: ${p.verdict}${p.test ? ' · ' + p.test : ''}`,
           value: `verdict  ${p.verdict}\ntest     ${p.test || '(unnamed)'}\nrun      ${p.runId || '?'}\nrecorded ${p.t}` }] : []),
-        ...(p && p.runId ? [{ kind: 'link', label: '▶ Watch the recording (LaunchProof)', value: `${PROOF_DASHBOARD}/#${p.runId}` }] : []),
+        ...(p && (p.url || (p.runId && PROOF_DASHBOARD)) ? [{ kind: 'link', label: '▶ Watch the recording', value: p.url || `${PROOF_DASHBOARD}/#${p.runId}` }] : []),
       ],
       actions: [
         { kind: 'verdict', label: 'Accept & close issue', value: 'accept' },
@@ -567,7 +572,7 @@ async function buildState(force) {
       if (c.resolved && c.resolved.verdict) events.push({ t: c.resolved.t, kind: 'decision', text: c.title, verdict: c.resolved.verdict, note: c.resolved.note || '' });
     }
     if (completed) events.push({ t: completeByIssue[iss.id].t, kind: 'complete', text: 'Agent marked complete' });
-    for (const pr of (proofByIssue[iss.id] || [])) events.push({ t: pr.t, kind: 'proof', text: `LaunchProof ${pr.verdict}`, verdict: pr.verdict, runId: pr.runId, test: pr.test });
+    for (const pr of (proofByIssue[iss.id] || [])) events.push({ t: pr.t, kind: 'proof', text: `e2e proof ${pr.verdict}`, verdict: pr.verdict, runId: pr.runId, test: pr.test, url: pr.url || '' });
     if (accepted) events.push({ t: acceptByIssue[iss.id].t, kind: 'accepted', text: 'Accepted — issue closed', note: acceptByIssue[iss.id].note || '' });
     events.sort((a, b) => new Date(a.t) - new Date(b.t));
     return {
@@ -576,7 +581,7 @@ async function buildState(force) {
       agent: iss.agentSessionId ? { sessionId: iss.agentSessionId, cwd: iss.agentCwd || '', label: iss.agentLabel || 'agent' } : null,
       decisions: decisions.map((c) => ({ id: c.id, title: c.title, urgency: c.urgency, resolved: c.resolved || null })),
       openCount,
-      proof: p ? { verdict: p.verdict, runId: p.runId, test: p.test, t: p.t, url: `${PROOF_DASHBOARD}/#${p.runId || ''}` } : null,
+      proof: p ? { verdict: p.verdict, runId: p.runId, test: p.test, t: p.t, url: p.url || (p.runId && PROOF_DASHBOARD ? `${PROOF_DASHBOARD}/#${p.runId}` : '') } : null,
       acceptanceTest: iss.acceptanceTest || null,
       accepted, completed, timeline: events,
     };

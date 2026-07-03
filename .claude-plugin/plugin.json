@@ -1,0 +1,8 @@
+{
+  "name": "vuoro",
+  "displayName": "VUORO",
+  "description": "Decision inbox for AI agent fleets: agents raise blocking decision cards, bind work to issues, and attach e2e proof; the human rules on one queue.",
+  "homepage": "https://github.com/TeemuSo/vuoro",
+  "repository": "https://github.com/TeemuSo/vuoro",
+  "license": "MIT"
+}

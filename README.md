@@ -63,6 +63,20 @@ Open http://localhost:4319. Out of the box VUORO finds your Claude Code sessions
 
 Prefer git? `git clone https://github.com/TeemuSo/vuoro && cd vuoro && node server.mjs`. Node 18+ is the only requirement.
 
+### Give it to your agents (Claude Code plugin)
+
+VUORO is also a Claude Code plugin. In any project:
+
+```
+/plugin marketplace add TeemuSo/vuoro
+/plugin install vuoro@vuoro
+```
+
+Agents in that project gain the `vuoro` skill — blocking asks, ballots, issues, and the
+proof webhook, all against your running cockpit. The plugin ships the whole cockpit too;
+to run the server from a plugin install, give it a stable data directory:
+`VUORO_DATA=~/.vuoro node server.mjs`.
+
 Optional, when you want more:
 
 - **GitHub PR cards**: authenticate the `gh` CLI and copy `config.example.json` to `config.json` to point at your repos.

@@ -45,31 +45,31 @@ Full lifecycle, states, and helpers: `ISSUE-PROTOCOL.md`.
 
 ## Proof: don't say "done", show it
 
-A feature isn't done because the build is green. Prove it with **LaunchProof** — a real
-browser drives the app and records a WORKING/BROKEN/INCONCLUSIVE verdict + video. The harness
-is a shared checkout at `$LAUNCHPROOF_HOME` (default `~/Projects/launchproof`); this repo keeps
-only its specs under `.launchproof/tests/`. Run, and point the webhook at VUORO so the verdict
-auto-attaches to the issue as its proof:
+A feature isn't done because the build is green. Prove it with a real e2e run — a browser
+drives the app, and a WORKING/BROKEN/INCONCLUSIVE verdict lands on the issue as its
+acceptance evidence. VUORO doesn't care which harness produced it; the contract is one
+webhook:
 ```
-LAUNCHPROOF_DIR="$PWD/.launchproof" TARGET_URL=http://localhost:4319 \
-  LAUNCHPROOF_WEBHOOK=http://localhost:4319/api/proof \
-  LAUNCHPROOF_WEBHOOK_EXTRA="{\"issueId\":\"$VUORO_ISSUE\"}" \
-  node "$LAUNCHPROOF_HOME/run.mjs" <feature>
+POST /api/proof  {"issueId":"$VUORO_ISSUE","test":"<name>","verdict":"WORKING","runId":"<id>","url":"<recording>"}
 ```
-See the `launchproof` skill (`.claude/skills/launchproof/`) for writing tests.
+`node proof.mjs --issue $VUORO_ISSUE --test <t> --verdict WORKING --run <id> --url <link>`
+wraps the same call. Harnesses with a webhook setting can auto-post it after each run —
+point the webhook at `http://localhost:4319/api/proof` and include the `issueId` in the
+payload. If a browser-proof skill is installed on this machine, use it. WORKING → the human
+accepts and the issue closes.
 
 ## Command reference
 
 | Do | Command |
 |----|---------|
 | Run the cockpit | `node server.mjs` → http://localhost:4319 |
-| Create an issue | `node issue.mjs "<title>" --desc "..." [--test <launchproof-test>]` · or Issues → **+ new** |
+| Create an issue | `node issue.mjs "<title>" --desc "..." [--test <e2e-test>]` · or Issues → **+ new** |
 | List issues | `node issue.mjs --list` |
 | Ask a decision (blocking) | `node ask.mjs "<q>" --why "..." --options "A,B" --issue $VUORO_ISSUE` |
 | Ask several calls sharing one context (ballot, blocks until all ruled) | `node ask.mjs "<title>" --why "..." --decision "key\|need\|A,B" --decision "key2\|need2\|Yes,No"` |
 | Mark an issue complete | `node complete.mjs --issue $VUORO_ISSUE` |
 | Attach proof by hand | `node proof.mjs --issue <id> --test <t> --verdict WORKING --run <runId>` |
-| Prove a feature | LaunchProof (above) |
+| Prove a feature | any e2e harness → webhook `/api/proof` (above) |
 
 All scripts are zero-dependency Node and honor `VUORO_PORT` (default 4319).
 

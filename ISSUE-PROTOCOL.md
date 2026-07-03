@@ -15,7 +15,7 @@ The loop, and the flags an agent uses at each step:
     rule on card  ◄───────────────────────────────────────────────  (queued)
                               continues on your answer
  4.                          done? ──► node complete.mjs         ──►  marks complete
- 5.                          prove ──► LaunchProof run (issue-bound) ─► proof attached
+ 5.                          prove ──► e2e run (webhook-bound)   ──►  proof attached
  6. accept card   ◄──────────────────────────────────────────────  acceptance card
     → issue closed
 ```
@@ -23,10 +23,10 @@ The loop, and the flags an agent uses at each step:
 ## 1. Create an issue
 
 ```
-node issue.mjs "<title>" --desc "<what + acceptance intent>" [--project vuoro] [--test <launchproof-test>]
+node issue.mjs "<title>" --desc "<what + acceptance intent>" [--project vuoro] [--test <e2e-test>]
 ```
 Prints the new issue id. Or create it in the cockpit (Issues → **+ new**). `--test`
-records which LaunchProof test is this issue's acceptance check.
+records which e2e test is this issue's acceptance check.
 
 ## 2. Spin an agent, bound to the issue
 
@@ -59,17 +59,18 @@ This raises the **acceptance card** — the gate that closes the issue.
 
 ## 5. Attach proof (e2e is the acceptance evidence)
 
-Run the issue's LaunchProof test with the harness webhook pointed at VUORO, so the verdict
-auto-attaches to the issue as its proof (the harness lives at `$LAUNCHPROOF_HOME`, default
-`~/Projects/launchproof`; this repo holds only the specs under `.launchproof/`):
+Run the issue's e2e test with whatever harness you use, then post the verdict to VUORO so
+it attaches to the issue as its proof. The contract is one webhook:
 ```
-LAUNCHPROOF_DIR="$PWD/.launchproof" TARGET_URL=http://localhost:4319 \
-  LAUNCHPROOF_WEBHOOK=http://localhost:4319/api/proof \
-  LAUNCHPROOF_WEBHOOK_EXTRA="{\"issueId\":\"$VUORO_ISSUE\"}" \
-  node "$LAUNCHPROOF_HOME/run.mjs" <test>
+POST /api/proof   { "issueId": "<id>", "test": "<name>",
+                    "verdict": "WORKING | BROKEN | INCONCLUSIVE",
+                    "runId": "<opaque>", "url": "<recording link, optional>" }
 ```
-The acceptance card then shows WORKING (green — accept) or BROKEN (red — bounce), with a
-link to the recording. To attach a run by hand: `node proof.mjs --issue <id> --test <t> --verdict WORKING --run <runId>`.
+By hand: `node proof.mjs --issue <id> --test <t> --verdict WORKING --run <runId> --url <link>`.
+Harnesses with a webhook setting can auto-post the same payload after each run — point the
+webhook at `http://localhost:4319/api/proof` and include the `issueId`. The acceptance card
+then shows WORKING (green — accept) or BROKEN (red — bounce), with a "watch the recording"
+link when the payload carried a `url`.
 
 ## 6. Accept
 
@@ -86,4 +87,4 @@ note). Accepting writes to the ledger and moves the issue to **Done**, proof and
 - `issues/<id>.json` — the seed (title, description, project, agent binding, acceptanceTest).
 - Decisions link via `issueId` on the card; proof/complete/accept are ledger events keyed by `issueId`.
 - `POST /api/issues` · `POST /api/issue/assign` · `POST /api/complete` · `POST /api/proof` · `POST /api/verdict {issueId}`.
-- Helpers: `issue.mjs` · `ask.mjs --issue` · `complete.mjs` · `proof.mjs`, and LaunchProof's `LAUNCHPROOF_WEBHOOK` → `/api/proof` auto-post.
+- Helpers: `issue.mjs` · `ask.mjs --issue` · `complete.mjs` · `proof.mjs`, and any harness webhook → `/api/proof` auto-post.

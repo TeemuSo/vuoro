@@ -20,7 +20,7 @@ async function main() {
     return;
   }
   const title = args.find((a) => !a.startsWith('--'));
-  if (!title) { console.error('usage: node issue.mjs "<title>" --desc "..." [--project x] [--test <launchproof-test>]'); process.exit(1); }
+  if (!title) { console.error('usage: node issue.mjs "<title>" --desc "..." [--project x] [--test <e2e-test>]'); process.exit(1); }
   const body = {
     title,
     description: opt('desc', opt('description', '')),

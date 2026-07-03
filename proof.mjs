@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // vuoro proof — attach an e2e result to an issue. Usually you don't call this
-// directly: LaunchProof's run.mjs auto-posts here when VUORO_ISSUE is set. Use
+// directly: an e2e harness with a webhook setting auto-posts to /api/proof. Use
 // it to attach a run by hand:
 //   node proof.mjs --issue <id> --test vuoro-system-panel --verdict WORKING --run <runId>
 const PORT = process.env.VUORO_PORT || 4319;

@@ -1,0 +1,12 @@
+{
+  "name": "vuoro",
+  "description": "VUORO — decision inbox for AI agent fleets. One queue of decisions for the human; blocking asks, ballots, and proof-gated issues for the agents.",
+  "owner": { "name": "TeemuSo" },
+  "plugins": [
+    {
+      "name": "vuoro",
+      "source": "./",
+      "description": "Decision inbox for AI agent fleets — blocking asks, ballots, issues with proof-gated acceptance, one queue for the human."
+    }
+  ]
+}
